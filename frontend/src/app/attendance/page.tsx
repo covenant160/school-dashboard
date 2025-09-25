@@ -36,27 +36,31 @@ const AttendancePage: React.FC = () => {
   // Toggle attendance
   const toggleAttendance = (id: number) => {
     setStudents((prev) =>
-      prev.map((s) =>
-        s.id === id ? { ...s, present: !s.present } : s
-      )
+      prev.map((s) => (s.id === id ? { ...s, present: !s.present } : s))
     );
   };
 
   // Submit attendance to backend
   const submitAttendance = async () => {
     try {
-      const attendanceRecords = students.map((s) => ({
-        id: s.id,
-        present: s.present,
-      }));
+      const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-      const res = await fetch(`${backendUrl}/attendance`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(attendanceRecords),
-      });
+      // Submit each student's attendance individually
+      for (const s of students) {
+        const res = await fetch(`${backendUrl}/attendance`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            student_id: s.id,  // must match backend
+            present: s.present || false,
+            date: today,
+          }),
+        });
 
-      if (!res.ok) throw new Error("Failed to submit attendance");
+        if (!res.ok) {
+          throw new Error(`Failed to submit attendance for ${s.name}`);
+        }
+      }
 
       alert("Attendance recorded successfully!");
       fetchStudents(); // refresh list and reset checkboxes

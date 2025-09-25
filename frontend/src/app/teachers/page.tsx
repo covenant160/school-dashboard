@@ -120,7 +120,7 @@ const TeachersPage: React.FC = () => {
                 <th className="border p-2">ID</th>
                 <th className="border p-2">Name</th>
                 
-                <th className="border p-2">Actions</th>
+                <th className="border p-2">Subject</th>
               </tr>
             </thead>
             <tbody>

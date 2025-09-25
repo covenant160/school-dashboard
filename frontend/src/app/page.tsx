@@ -12,7 +12,7 @@ interface Attendance {
   id: number;
   studentId: number;
   studentName?: string;
-  present: number;
+  present: boolean;
   date: string;
 }
 
@@ -48,7 +48,6 @@ const HomePage: React.FC = () => {
   const [attendanceStudentId, setAttendanceStudentId] = useState<number | "">("");
   const [attendancePresent, setAttendancePresent] = useState<number>(1);
 
-  // Fetch all data
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -80,17 +79,17 @@ const HomePage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Compute attendance stats
-  const presentCount = attendance.filter((a) => a.present === 1).length;
+  // Attendance stats
+  const presentCount = attendance.filter(a => a.present === true).length;
   const absentCount = attendance.length - presentCount;
 
-  // Prepare last 7 days trend
+  // Last 7 days trend
   const today = new Date();
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     const dateStr = d.toISOString().split("T")[0];
-    const presentToday = attendance.filter(a => a.date === dateStr && a.present === 1).length;
+    const presentToday = attendance.filter(a => a.date === dateStr && a.present === true).length;
     return { date: dateStr.split("-")[2], present: presentToday };
   }).reverse();
 
@@ -136,7 +135,7 @@ const HomePage: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           student_id: attendanceStudentId,
-          present: attendancePresent,
+          present: attendancePresent === 1, // convert number to boolean
           date: todayStr,
         }),
       });
@@ -158,7 +157,6 @@ const HomePage: React.FC = () => {
       <div className="bg-opacity-60 min-h-screen">
         <Navbar />
         <main className="p-6">
-
           {/* Welcome */}
           <div className="mb-8 text-white">
             <h1 className="text-4xl font-extrabold">Welcome to the School Dashboard 🎓</h1>
@@ -192,7 +190,7 @@ const HomePage: React.FC = () => {
 
           {/* PieChart */}
           <div className="bg-white rounded-lg p-6 shadow-lg mb-8">
-            <h2 className="text-xl font-bold mb-4 text-gray-700">Today&apos;s Attendance</h2>
+            <h2 className="text-xl font-bold mb-4 text-gray-700">Todays Attendance</h2>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
@@ -233,7 +231,7 @@ const HomePage: React.FC = () => {
             </ResponsiveContainer>
           </div>
 
-          {/* Quick Actions Forms */}
+          {/* Forms */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             {/* Add Student */}
             <div className="bg-white p-4 rounded shadow">
@@ -277,11 +275,10 @@ const HomePage: React.FC = () => {
                     <th className="px-4 py-2 border">Date</th>
                     <th className="px-4 py-2 border">Student</th>
                     <th className="px-4 py-2 border">Present</th>
-                    <th className="px-4 py-2 border">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {attendance.map((a) => {
+                  {attendance.map(a => {
                     const student = students.find(s => s.id === a.studentId);
                     return (
                       <tr key={a.id}>
@@ -289,23 +286,6 @@ const HomePage: React.FC = () => {
                         <td className="px-4 py-2 border">{student?.name || a.studentName || "Unknown"}</td>
                         <td className={`px-4 py-2 border font-bold ${a.present ? "text-green-600" : "text-red-600"}`}>
                           {a.present ? "Present" : "Absent"}
-                        </td>
-                        <td className="px-4 py-2 border">
-                          <button
-                            className="bg-yellow-400 text-white px-2 py-1 rounded"
-                            onClick={async () => {
-                              try {
-                                const updated = await fetch(`${backendUrl}/attendance/${a.id}`, {
-                                  method: "PUT",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ present: a.present ? 0 : 1 }),
-                                }).then(res => res.json());
-                                setAttendance(prev => prev.map(att => att.id === a.id ? updated : att));
-                              } catch (err) { console.error(err); }
-                            }}
-                          >
-                            
-                          </button>
                         </td>
                       </tr>
                     );
@@ -324,7 +304,6 @@ const HomePage: React.FC = () => {
               <li>Parent-Teacher Meeting - 2025-10-20</li>
             </ul>
           </div>
-
         </main>
       </div>
     </div>

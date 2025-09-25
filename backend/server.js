@@ -130,17 +130,30 @@ app.put("/attendance/:id", (req, res) => {
 ////////////////////////
 app.get("/grades", (req, res) => res.json(grades));
 
+// ✅ Bulk grade submission fix
 app.post("/grades", (req, res) => {
-  const { studentId, grade } = req.body;
-  if (!studentId || !grade) return res.status(400).json({ error: "StudentId and grade are required" });
+  const data = req.body;
 
-  const student = students.find(s => s.id === studentId);
-  if (!student) return res.status(404).json({ error: "Student not found" });
+  if (!Array.isArray(data)) {
+    return res.status(400).json({ error: "Expected an array of { id, grade } objects" });
+  }
 
-  const id = grades.length + 1;
-  const newGrade = { id, studentId, grade: grade.trim() };
-  grades.push(newGrade);
-  res.json(newGrade);
+  const updated = [];
+
+  data.forEach(({ id, grade }) => {
+    const student = students.find(s => s.id === id);
+    if (student) {
+      // update student grade
+      student.grade = grade.trim();
+
+      const newGrade = { id: grades.length + 1, studentId: id, grade: grade.trim() };
+      grades.push(newGrade);
+
+      updated.push(newGrade);
+    }
+  });
+
+  res.json({ message: "✅ Grades submitted successfully!", updated });
 });
 
 ////////////////////////

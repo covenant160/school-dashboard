@@ -1,30 +1,32 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 
 interface Student {
   id: number;
   name: string;
-  grade: string;
+  grade: string; // current grade from backend
   parent: string;
-  assignedGrade?: string;
+  assignedGrade?: string; // for new grade input
 }
 
 const GradesPage: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
-  const backendUrl = "http://localhost:5000";
+  const backendUrl = "http://localhost:5000"; // Backend URL
 
   // Fetch students from backend
   const fetchStudents = async () => {
     try {
       const res = await fetch(`${backendUrl}/students`);
       if (!res.ok) throw new Error("Failed to fetch students");
-      const data = await res.json();
-      const updated = data.map((s: Student) => ({
+      const data: Student[] = await res.json();
+      // Initialize assignedGrade with current grade
+      const studentsWithAssigned = data.map((s) => ({
         ...s,
         assignedGrade: s.grade,
       }));
-      setStudents(updated);
+      setStudents(studentsWithAssigned);
     } catch (err) {
       console.error(err);
     }
@@ -34,37 +36,43 @@ const GradesPage: React.FC = () => {
     fetchStudents();
   }, []);
 
-  // Update assigned grade locally
-  const handleGradeChange = (id: number, grade: string) => {
+  // Handle input change for assignedGrade
+  const handleGradeChange = (id: number, value: string) => {
     setStudents((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, assignedGrade: grade } : s))
+      prev.map((s) => (s.id === id ? { ...s, assignedGrade: value } : s))
     );
   };
 
   // Submit grades to backend
   const submitGrades = async () => {
     try {
-      const res = await fetch(`${backendUrl}/grades`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(students.map(({ id, assignedGrade }) => ({ id, grade: assignedGrade }))),
-      });
-      if (!res.ok) throw new Error("Failed to submit grades");
+      // Send one POST request per student
+      for (const s of students) {
+        if (!s.assignedGrade) continue; // skip empty
+        const res = await fetch(`${backendUrl}/grades`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentId: s.id, grade: s.assignedGrade }),
+        });
+        if (!res.ok) throw new Error(`Failed to submit grade for ${s.name}`);
+      }
+
       alert("Grades submitted successfully!");
-      fetchStudents(); // refresh data
+      fetchStudents(); // refresh student data
     } catch (err) {
       console.error(err);
-      alert("Error submitting grades. Check console for details.");
+      alert("Failed to submit grades. Check console for details.");
     }
   };
 
   return (
     <div>
       <Navbar />
-      <div className="p-6">
+      <main className="p-6">
         <h1 className="text-2xl font-bold mb-4">Grades Management</h1>
 
-        <table className="min-w-full border mb-4">
+        {/* Students Table */}
+        <table className="min-w-full border">
           <thead>
             <tr className="bg-gray-200">
               <th className="border p-2">ID</th>
@@ -82,9 +90,9 @@ const GradesPage: React.FC = () => {
                 <td className="border p-2">
                   <input
                     type="text"
+                    className="border p-1 w-20"
                     value={s.assignedGrade || ""}
                     onChange={(e) => handleGradeChange(s.id, e.target.value)}
-                    className="border p-1 w-full"
                   />
                 </td>
               </tr>
@@ -92,13 +100,14 @@ const GradesPage: React.FC = () => {
           </tbody>
         </table>
 
+        {/* Submit Button */}
         <button
-          className="bg-blue-600 text-white px-4 py-2"
+          className="mt-4 bg-blue-600 text-white px-4 py-2"
           onClick={submitGrades}
         >
           Submit Grades
         </button>
-      </div>
+      </main>
     </div>
   );
 };
